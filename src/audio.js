@@ -37,10 +37,24 @@ function buildGraph(ctx, opts) {
   return { input, master, wet };
 }
 
+function startKeepAlive() {
+  const src = ac.createConstantSource();
+  const g = ac.createGain();
+  g.gain.value = 0;
+  src.connect(g).connect(ac.destination);
+  src.start();
+}
+
 export function ensureAudio() {
   if (ac) return;
-  ac = new (window.AudioContext || window.webkitAudioContext)();
+  ac = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" });
   graph = buildGraph(ac, settings);
+  startKeepAlive();
+}
+
+export function warmUp() {
+  ensureAudio();
+  resume();
 }
 
 export function playNote(freq, when, voiceName) {
