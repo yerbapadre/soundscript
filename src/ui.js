@@ -1,5 +1,6 @@
-import { NOTES, SCALES, VOICES, settings } from "./config.js";
+import { NOTES, SCALES, VOICES, ARP_PATTERNS, ARP_SPEEDS, settings } from "./config.js";
 import { ensureAudio, setVol, setReverb } from "./audio.js";
+import { setArpEnabled, setArpPattern, setArpSpeed } from "./arp.js";
 import { bus } from "./bus.js";
 import {
   getTracks, getArmedId, getTransportMode, hasAudio,
@@ -32,6 +33,19 @@ function wireControls() {
   voice.addEventListener("change", (e) => { settings.voice = e.target.value; e.target.blur(); });
   document.getElementById("reverb").addEventListener("input", (e) => setReverb(e.target.value / 100));
   document.getElementById("vol").addEventListener("input", (e) => setVol(e.target.value / 100));
+
+  const arp = document.getElementById("arp");
+  const arpPattern = document.getElementById("arpPattern");
+  const arpSpeed = document.getElementById("arpSpeed");
+  fillSelect(arpPattern, ARP_PATTERNS, settings.arpPattern);
+  const speedLabelForMs = Object.keys(ARP_SPEEDS).find((k) => ARP_SPEEDS[k] === settings.arpSpeed);
+  fillSelect(arpSpeed, Object.keys(ARP_SPEEDS), speedLabelForMs);
+  arp.checked = settings.arpOn;
+  const syncArpControls = () => { arpPattern.disabled = !arp.checked; arpSpeed.disabled = !arp.checked; };
+  syncArpControls();
+  arp.addEventListener("change", (e) => { setArpEnabled(e.target.checked); syncArpControls(); });
+  arpPattern.addEventListener("change", (e) => { setArpPattern(e.target.value); e.target.blur(); });
+  arpSpeed.addEventListener("change", (e) => { setArpSpeed(ARP_SPEEDS[e.target.value]); e.target.blur(); });
 
   recBtn.addEventListener("click", toggleRec);
   playBtn.addEventListener("click", togglePlay);

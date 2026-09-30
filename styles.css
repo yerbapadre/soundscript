@@ -38,6 +38,8 @@ input[type=range] {
 input[type=range]::-webkit-slider-thumb {
   -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--accent);
 }
+input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+select:disabled { opacity: 0.35; cursor: default; }
 button {
   font-family: var(--font);
   background: var(--panel); color: var(--text);

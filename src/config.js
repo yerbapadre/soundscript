@@ -19,4 +19,10 @@ export const KEY_ORDER = "abcdefghijklmnopqrstuvwxyz0123456789".split("");
 export const BASE_OCTAVE = 3;
 export const TRACK_COUNT = 4;
 
-export const settings = { root: "C", scale: "Pentatonic Major", voice: "Bell", reverb: 0.7, vol: 0.7 };
+export const ARP_PATTERNS = ["Up", "Down", "Up/Down", "Random"];
+export const ARP_SPEEDS = { Fast: 90, Med: 150, Slow: 240 };
+
+export const settings = {
+  root: "C", scale: "Pentatonic Major", voice: "Bell", reverb: 0.7, vol: 0.7,
+  arpOn: false, arpPattern: "Up", arpSpeed: 150,
+};
