@@ -23,6 +23,8 @@ export const ARP_PATTERNS = ["Up", "Down", "Up/Down", "Random"];
 export const ARP_SPEEDS = { Fast: 90, Med: 150, Slow: 240 };
 
 export const settings = {
-  root: "C", scale: "Pentatonic Major", voice: "Bell", reverb: 0.7, vol: 0.7,
+  root: "C", scale: "Pentatonic Major", voice: "Bell", vol: 0.7,
   arpOn: false, arpPattern: "Up", arpSpeed: 150,
 };
+
+export const DEFAULT_TRACK_FX = { volume: 0.8, reverb: 0.5, delay: 0.3 };

@@ -18,8 +18,7 @@
     <div class="ctl"><label for="arp">ARP</label><input id="arp" type="checkbox" /></div>
     <div class="ctl"><label>PATTERN</label><select id="arpPattern"></select></div>
     <div class="ctl"><label>SPEED</label><select id="arpSpeed"></select></div>
-    <div class="ctl"><label>REVERB</label><input id="reverb" type="range" min="0" max="100" value="70" /></div>
-    <div class="ctl"><label>VOL</label><input id="vol" type="range" min="0" max="100" value="70" /></div>
+    <div class="ctl"><label>MASTER</label><input id="vol" type="range" min="0" max="100" value="70" /></div>
 
     <div class="spacer"></div>
 
@@ -32,6 +31,12 @@
 
   <div class="tracks" id="tracks">
     <h4>TRACKS · arm one, hit REC, layer over the rest</h4>
+    <div class="trackfx" id="trackfx">
+      <h4 id="fx-title">FX</h4>
+      <div class="fxrow"><label>VOL</label><input id="fx-vol" type="range" min="0" max="100" /></div>
+      <div class="fxrow"><label>REVERB</label><input id="fx-reverb" type="range" min="0" max="100" /></div>
+      <div class="fxrow"><label>DELAY</label><input id="fx-delay" type="range" min="0" max="100" /></div>
+    </div>
   </div>
 
   <div class="hint" id="hint">start typing — <kbd>A</kbd>–<kbd>Z</kbd> play the scale · <kbd>space</kbd> rests</div>

@@ -1,14 +1,30 @@
-import { settings, TRACK_COUNT } from "./config.js";
-import { getCtx, ensureAudio, resume, playNote, renderToWav } from "./audio.js";
+import { settings, TRACK_COUNT, DEFAULT_TRACK_FX } from "./config.js";
+import {
+  getCtx, ensureAudio, resume, playNote, renderToWav,
+  setChannelParamsProvider, setTrackVolume as applyVolume,
+  setTrackReverb as applyReverb, setTrackDelay as applyDelay,
+} from "./audio.js";
 import { spawnVisual } from "./visuals.js";
 import { bus } from "./bus.js";
 
 const tracks = [];
 for (let i = 0; i < TRACK_COUNT; i++) {
-  tracks.push({ id: i, name: "Track " + (i + 1), events: [], muted: false, solo: false });
+  tracks.push({
+    id: i, name: "Track " + (i + 1), events: [], muted: false, solo: false,
+    volume: DEFAULT_TRACK_FX.volume, reverb: DEFAULT_TRACK_FX.reverb, delay: DEFAULT_TRACK_FX.delay,
+  });
 }
 let armedId = 0;
 const transport = { mode: "idle", base: 0, timers: [], rafId: 0 };
+
+setChannelParamsProvider((i) => {
+  const t = tracks[i];
+  return { volume: t.volume, reverb: t.reverb, delay: t.delay };
+});
+
+export function setTrackVolume(id, v) { tracks[id].volume = v; applyVolume(id, v); }
+export function setTrackReverb(id, v) { tracks[id].reverb = v; applyReverb(id, v); }
+export function setTrackDelay(id, v) { tracks[id].delay = v; applyDelay(id, v); }
 
 export function getTracks() { return tracks; }
 export function getArmedId() { return armedId; }
@@ -40,7 +56,7 @@ function scheduleTrackPlayback(t, base, excludeId) {
   const ac = getCtx();
   for (const e of t.events) {
     if (!e.freq) continue;
-    playNote(e.freq, base + e.t, e.voice);
+    playNote(e.freq, base + e.t, e.voice, t.id);
     transport.timers.push(setTimeout(() => spawnVisual(e.char, e.freq), Math.max(0, (base + e.t - ac.currentTime) * 1000)));
   }
 }

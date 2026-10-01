@@ -1,14 +1,14 @@
 import { settings } from "./config.js";
 import { ensureAudio, resume, playNote, getCtx } from "./audio.js";
 import { spawnVisual } from "./visuals.js";
-import { recordLive } from "./tracks.js";
+import { recordLive, getArmedId } from "./tracks.js";
 
 const held = new Map();
 let timer = null;
 let idx = 0;
 
 function emit(freq, char) {
-  playNote(freq, getCtx().currentTime);
+  playNote(freq, getCtx().currentTime, undefined, getArmedId());
   spawnVisual(char, freq);
   recordLive(freq, char);
 }

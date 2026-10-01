@@ -1,8 +1,14 @@
-import { settings } from "./config.js";
+import { settings, TRACK_COUNT, DEFAULT_TRACK_FX } from "./config.js";
 import { VOICE_SYNTH } from "./voices.js";
 
 let ac = null;
-let graph = null;
+let mixer = null;
+let channels = [];
+
+let paramsProvider = () => ({ ...DEFAULT_TRACK_FX });
+export function setChannelParamsProvider(fn) {
+  paramsProvider = fn;
+}
 
 export function getCtx() {
   return ac;
@@ -22,19 +28,30 @@ function makeImpulse(ctx, duration, decay) {
   return buf;
 }
 
-function buildGraph(ctx, opts) {
+function buildMixer(ctx, masterVol) {
   const comp = ctx.createDynamicsCompressor();
   comp.connect(ctx.destination);
-  const master = ctx.createGain(); master.gain.value = opts.vol; master.connect(comp);
+  const master = ctx.createGain(); master.gain.value = masterVol; master.connect(comp);
+
   const convolver = ctx.createConvolver(); convolver.buffer = makeImpulse(ctx, 3.2, 2.2);
-  const wet = ctx.createGain(); wet.gain.value = opts.reverb; convolver.connect(wet).connect(master);
+  const reverbReturn = ctx.createGain(); reverbReturn.gain.value = 0.9;
+  convolver.connect(reverbReturn).connect(master);
+
   const delay = ctx.createDelay(1.0); delay.delayTime.value = 0.28;
   const fb = ctx.createGain(); fb.gain.value = 0.32; delay.connect(fb).connect(delay);
-  const delayWet = ctx.createGain(); delayWet.gain.value = 0.35; delay.connect(delayWet).connect(master); delay.connect(convolver);
-  const dry = ctx.createGain(); dry.gain.value = 0.85; dry.connect(master);
-  const input = ctx.createGain();
-  input.connect(dry); input.connect(convolver); input.connect(delay);
-  return { input, master, wet };
+  const delayReturn = ctx.createGain(); delayReturn.gain.value = 0.9;
+  delay.connect(delayReturn).connect(master);
+  delay.connect(convolver);
+
+  return { master, convolver, delay };
+}
+
+function makeChannel(ctx, mix, p) {
+  const input = ctx.createGain(); input.gain.value = p.volume;
+  input.connect(mix.master);
+  const rev = ctx.createGain(); rev.gain.value = p.reverb; input.connect(rev); rev.connect(mix.convolver);
+  const dly = ctx.createGain(); dly.gain.value = p.delay; input.connect(dly); dly.connect(mix.delay);
+  return { input, rev, dly };
 }
 
 function startKeepAlive() {
@@ -48,7 +65,9 @@ function startKeepAlive() {
 export function ensureAudio() {
   if (ac) return;
   ac = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" });
-  graph = buildGraph(ac, settings);
+  mixer = buildMixer(ac, settings.vol);
+  channels = [];
+  for (let i = 0; i < TRACK_COUNT; i++) channels.push(makeChannel(ac, mixer, paramsProvider(i)));
   startKeepAlive();
 }
 
@@ -57,27 +76,31 @@ export function warmUp() {
   resume();
 }
 
-export function playNote(freq, when, voiceName) {
-  VOICE_SYNTH[voiceName || settings.voice](ac, graph.input, freq, when);
+export function playNote(freq, when, voiceName, channelIndex) {
+  const ch = channels[channelIndex];
+  if (!ch) return;
+  VOICE_SYNTH[voiceName || settings.voice](ac, ch.input, freq, when);
 }
 
-export function setVol(v) {
+export function setMasterVol(v) {
   settings.vol = v;
-  if (graph) graph.master.gain.value = v;
+  if (mixer) mixer.master.gain.value = v;
 }
 
-export function setReverb(v) {
-  settings.reverb = v;
-  if (graph) graph.wet.gain.value = v;
-}
+export function setTrackVolume(i, v) { if (channels[i]) channels[i].input.gain.value = v; }
+export function setTrackReverb(i, v) { if (channels[i]) channels[i].rev.gain.value = v; }
+export function setTrackDelay(i, v) { if (channels[i]) channels[i].dly.gain.value = v; }
 
 export async function renderToWav(list, duration, filename) {
   if (!list.length) return;
   const sr = 44100;
   const off = new OfflineAudioContext(2, Math.ceil(duration * sr), sr);
-  const g = buildGraph(off, settings);
+  const mix = buildMixer(off, settings.vol);
   const t0 = 0.05;
-  for (const t of list) for (const e of t.events) if (e.freq) VOICE_SYNTH[e.voice](off, g.input, e.freq, t0 + e.t);
+  for (const t of list) {
+    const ch = makeChannel(off, mix, { volume: t.volume, reverb: t.reverb, delay: t.delay });
+    for (const e of t.events) if (e.freq) VOICE_SYNTH[e.voice](off, ch.input, e.freq, t0 + e.t);
+  }
   const rendered = await off.startRendering();
   const blob = encodeWav(rendered);
   const url = URL.createObjectURL(blob);

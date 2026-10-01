@@ -1,5 +1,5 @@
 import { NOTES, SCALES, VOICES, ARP_PATTERNS, ARP_SPEEDS, settings } from "./config.js";
-import { ensureAudio, setVol, setReverb } from "./audio.js";
+import { ensureAudio, setMasterVol } from "./audio.js";
 import { setArpEnabled, setArpPattern, setArpSpeed } from "./arp.js";
 import { bus } from "./bus.js";
 import {
@@ -7,10 +7,12 @@ import {
   audible, trackDuration,
   setArmedId, toggleMute, toggleSolo, clearTrack,
   togglePlay, toggleRec, stopTransport,
+  setTrackVolume, setTrackReverb, setTrackDelay,
   exportMix, exportTrack,
 } from "./tracks.js";
 
 let tracksEl, clockEl, recBtn, playBtn, stopBtn, exportBtn;
+let fxTitleEl, fxVol, fxReverb, fxDelay;
 
 function fillSelect(el, items, selected) {
   el.innerHTML = "";
@@ -31,8 +33,7 @@ function wireControls() {
   root.addEventListener("change", (e) => { settings.root = e.target.value; e.target.blur(); });
   scale.addEventListener("change", (e) => { settings.scale = e.target.value; e.target.blur(); });
   voice.addEventListener("change", (e) => { settings.voice = e.target.value; e.target.blur(); });
-  document.getElementById("reverb").addEventListener("input", (e) => setReverb(e.target.value / 100));
-  document.getElementById("vol").addEventListener("input", (e) => setVol(e.target.value / 100));
+  document.getElementById("vol").addEventListener("input", (e) => setMasterVol(e.target.value / 100));
 
   const arp = document.getElementById("arp");
   const arpPattern = document.getElementById("arpPattern");
@@ -105,8 +106,26 @@ function renderTracks() {
     clr.addEventListener("click", (e) => { e.stopPropagation(); clearTrack(t.id); });
 
     row.append(arm, nm, meter, mute, solo, dl, clr);
-    tracksEl.appendChild(row);
+    tracksEl.insertBefore(row, document.getElementById("trackfx"));
   });
+}
+
+function wireFxPanel() {
+  fxTitleEl = document.getElementById("fx-title");
+  fxVol = document.getElementById("fx-vol");
+  fxReverb = document.getElementById("fx-reverb");
+  fxDelay = document.getElementById("fx-delay");
+  fxVol.addEventListener("input", (e) => setTrackVolume(getArmedId(), e.target.value / 100));
+  fxReverb.addEventListener("input", (e) => setTrackReverb(getArmedId(), e.target.value / 100));
+  fxDelay.addEventListener("input", (e) => setTrackDelay(getArmedId(), e.target.value / 100));
+}
+
+function updateFxPanel() {
+  const t = getTracks()[getArmedId()];
+  fxTitleEl.textContent = "FX · " + t.name;
+  fxVol.value = Math.round(t.volume * 100);
+  fxReverb.value = Math.round(t.reverb * 100);
+  fxDelay.value = Math.round(t.delay * 100);
 }
 
 function updatePlayheads(elapsed, mode) {
@@ -131,12 +150,15 @@ export function initUI() {
   exportBtn = document.getElementById("export");
 
   wireControls();
+  wireFxPanel();
   renderTracks();
   refreshTransport();
+  updateFxPanel();
 
   bus.on("change", () => {
     renderTracks();
     refreshTransport();
+    updateFxPanel();
     if (getTransportMode() === "idle") {
       clockEl.textContent = "0.0s";
       clockEl.classList.remove("live");
